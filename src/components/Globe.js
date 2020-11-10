@@ -30,7 +30,7 @@ const ambientLight = new AmbientLight({
     intensity: 1
 });
 const colorScale = (val) => {
-    let color = d3.color(d3.interpolateYlOrRd((val/1000)+0.25));
+    let color = d3.color(d3.interpolateYlOrRd(val/1000));
     return [color.r, color.g, color.b, 150]
 }
 // Source data GeoJSON
