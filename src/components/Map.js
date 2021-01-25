@@ -64,7 +64,7 @@ const Map = () => {
         let tempList = ['2020-02-01']
         let currDate = '2020-02-01'
 
-        while (currDate < '2021-01-19') {
+        while (currDate < '2021-01-18') {
             let tempDate = moment(currDate, 'YYYY-MM-DD')
             currDate = tempDate.add(1, 'day').format().slice(0,10)
             tempList.push(currDate)
@@ -220,6 +220,7 @@ const Map = () => {
                 </p>
                 <Slider 
                     value={timeInterval} 
+                    onMouseDown={running ? toggle : idle} 
                     onChange={handleTimeInterval} 
                     min={0}
                     max={900}
