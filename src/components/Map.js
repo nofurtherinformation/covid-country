@@ -1,12 +1,10 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import DeckGL from '@deck.gl/react';
 import {LightingEffect, DirectionalLight, AmbientLight } from '@deck.gl/core';
-import {SolidPolygonLayer, ScatterplotLayer, PolygonLayer, ColumnLayer } from '@deck.gl/layers';
+import {SolidPolygonLayer, PolygonLayer, ColumnLayer } from '@deck.gl/layers';
 import {COORDINATE_SYSTEM} from '@deck.gl/core';
-import {SimpleMeshLayer} from '@deck.gl/mesh-layers';
-import {SphereGeometry, IcoSphereGeometry} from '@luma.gl/core'
-import styled from 'styled-components';
-import Button from '@material-ui/core/Button';
+import Slider from '@material-ui/core/Slider';
+// import {SphereGeometry, IcoSphereGeometry} from '@luma.gl/core'
 import * as moment from 'moment';
 import * as d3 from 'd3';
 
@@ -14,20 +12,6 @@ const DATA_URL = {
     state_boundaries: `${process.env.PUBLIC_URL}/data/state_borders.json`,
     county_boundaries: `${process.env.PUBLIC_URL}/data/county_borders.json`
 }
-
-const MapContainer = styled.div`
-    position:fixed;
-    width:100%;
-    height:100%;
-    top:0;
-    left:0;
-    overflow:visible;
-    background:rgb(15,15,15);
-`
-
-const geom = new IcoSphereGeometry({
-    iterations: 1
-  });
 
 const dirLight = new DirectionalLight({
     color: [128, 128, 0],
@@ -76,7 +60,21 @@ const handleColor = (val) => {
 /* eslint-disable react/no-deprecated */
 const Map = () => {
 
-    const timeInterval = 175;
+    const dateList = () => {
+        let tempList = ['2020-02-01']
+        let currDate = '2020-02-01'
+
+        while (currDate < '2021-01-19') {
+            let tempDate = moment(currDate, 'YYYY-MM-DD')
+            currDate = tempDate.add(1, 'day').format().slice(0,10)
+            tempList.push(currDate)
+        }
+
+        return tempList
+        
+    }
+
+    let validDates = dateList()
 
     const [initialViewState, setInitialViewState] = useState({
         latitude: 0,
@@ -90,11 +88,27 @@ const Map = () => {
         const lightingEffect = new LightingEffect({dirLight, ambientLight});
         lightingEffect.shadowColor = [0, 0, 0, 0.15];
         return [lightingEffect];
-        });
-    
-    const [currDate, setCurrDate] = useState(['2020-02-01'])
+    });
+
     const [timerId, setTimerId] = useState(null)
     const [centroidData, setCentroidData] = useState([])
+    const [timeInterval, setTimeInterval] = useState(800)
+    
+    const [currDate, setCurrDate] = useState(['2020-02-01']);
+
+    const [toggle, running] = useInterval(() => {
+        setCurrDate(t => {
+            if (t < '2021-01-19') {
+                var a = moment(t, 'YYYY-MM-DD')
+                a = a.add(1, 'day')
+                return a.format().slice(0,10)
+            } else {
+                return t
+            }
+        })
+    }, 1000-timeInterval);
+  
+    const resetDate = () => setCurrDate('2020-02-01');
 
     useEffect(() => {
         document.addEventListener('contextmenu', event => event.preventDefault());
@@ -102,23 +116,6 @@ const Map = () => {
         d3.csv(`${process.env.PUBLIC_URL}/data/centroids_testing_albers.csv`, d3.autoType)
             .then(data => { setCentroidData(data) })
     },[])
-    
-    const PlayAnimation = () => {
-        setCurrDate(['2020-02-01'])
-        if (timerId === null) {
-            setTimerId(setInterval(() => {
-                setCurrDate(t => {
-                    if (t < '2021-01-19') {
-                        var a = moment(t, 'YYYY-MM-DD')
-                        a = a.add(1, 'day')
-                        return a.format().slice(0,10)
-                    } else {
-                        return t
-                    }
-                })
-            },timeInterval))
-        };
-    }
 
     const layers =  [ 
         new SolidPolygonLayer({
@@ -196,15 +193,53 @@ const Map = () => {
                 getElevation: currDate,
             },
             transitions: {
-                getFillColor: timeInterval,
-                getElevation: timeInterval,
+                getFillColor: 1000-timeInterval,
+                getElevation: 1000-timeInterval,
             }
         })
     ]
 
+    const handleTimeInterval = (e, newVal) => {
+        setTimeInterval(newVal)
+    };
+
+    const handleDate = (e, newVal) => {
+        setCurrDate(validDates[newVal])
+    };
+
+    const idle = () => {}
+
     return (
-        <MapContainer>
-            <Button onClick={PlayAnimation} id="playButton">{timerId === null ? 'Play' : 'Reset' }</Button>
+        <div id="mapContainer">
+            <div id="buttons">
+                <button onClick={resetDate}>Reset</button>
+                <button onClick={toggle}>{running ? "Pause" : "Resume"}</button>
+                
+                <p id="playback-slider" >
+                    Playback Speed
+                </p>
+                <Slider 
+                    value={timeInterval} 
+                    onChange={handleTimeInterval} 
+                    min={0}
+                    max={900}
+                    step={25}
+                    aria-labelledby="playback-slider"
+                />
+
+                <p id="date-slider" >
+                    Date Select
+                </p>
+                <Slider 
+                    value={validDates.indexOf(currDate)}
+                    onMouseDown={running ? toggle : idle} 
+                    onChange={handleDate} 
+                    min={0}
+                    max={validDates.length-1}
+                    step={1}
+                    aria-labelledby="date-slider"
+                />
+            </div>
             <div id="title">
                 <h1>COVID Testing Positivity Rates</h1>
                 <h2>7-Day Rolling Average of {currDate}</h2>
@@ -234,8 +269,44 @@ const Map = () => {
                 effects={effects}
                 controller={true}>
             </DeckGL>
-        </MapContainer>
+        </div>
     )
+}
+
+// Thanks https://stackoverflow.com/a/56952253 @Ori Drori
+function useInterval(callback, delay) {
+    const savedCallback = useRef();
+    const intervalId = useRef(null);
+    const [currentDelay, setDelay] = useState(delay);
+  
+    const toggleRunning = useCallback(
+      () => setDelay(currentDelay => (currentDelay === null ? delay : null)),
+      [delay]
+    );
+  
+    const clear = useCallback(() => clearInterval(intervalId.current), []);
+  
+    // Remember the latest function.
+    useEffect(() => {
+      savedCallback.current = callback;
+    }, [callback]);
+  
+    // Set up the interval.
+    useEffect(() => {
+      function tick() {
+        savedCallback.current();
+      }
+  
+      if (intervalId.current) clear();
+  
+      if (currentDelay !== null) {
+        intervalId.current = setInterval(tick, currentDelay);
+      }
+  
+      return clear;
+    }, [currentDelay, clear]);
+  
+    return [toggleRunning, !!currentDelay];
 }
 
 export default Map
