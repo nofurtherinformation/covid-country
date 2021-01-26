@@ -79,7 +79,7 @@ const Map = () => {
     const [initialViewState, setInitialViewState] = useState({
         latitude: 0,
         longitude: 0,
-        zoom: 4.75,
+        zoom: 4.6,
         pitch:40,
         bearing:0
     });
@@ -98,7 +98,7 @@ const Map = () => {
 
     const [toggle, running] = useInterval(() => {
         setCurrDate(t => {
-            if (t < '2021-01-19') {
+            if (t < '2021-01-18') {
                 var a = moment(t, 'YYYY-MM-DD')
                 a = a.add(1, 'day')
                 return a.format().slice(0,10)
@@ -188,6 +188,7 @@ const Map = () => {
             getFillColor: d => handleColor(d[`pos_${currDate}`]),
             getLineColor: [0, 0, 0],
             getElevation: d => [(d[`pos_${currDate}`])*250],
+            // getElevation: d => [(d[`tcap_${currDate}`])/10],
             updateTriggers: {
                 getFillColor: currDate,
                 getElevation: currDate,

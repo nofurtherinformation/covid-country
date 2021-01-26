@@ -54,6 +54,10 @@
   right:20px;
   border-right-width: 20px;
   color:white;
+  opacity:0;
+}
+#buttons:hover {
+  opacity:1;
 }
 
 #buttons button {
@@ -135,7 +139,7 @@
 #scale {
   position: fixed;
   right:20px;
-  top:50%;
+  top:80%;
   transform:translateY(-50%);
   display: flex;
 }
